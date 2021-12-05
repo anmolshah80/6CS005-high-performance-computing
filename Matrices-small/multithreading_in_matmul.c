@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 int *find_number_of_rows_and_columns(const char *file_name);
 
@@ -12,8 +13,8 @@ void main()
 
     int rows_in_matrixA, cols_in_matrixA, rows_in_matrixB, cols_in_matrixB, rows_in_matrixC, cols_in_matrixC;
 
-    char *matrixA_filename = "Mat1.txt";
-    char *matrixB_filename = "Mat2.txt";
+    char *matrixA_filename = "MatA.txt";
+    char *matrixB_filename = "MatB.txt";
 
     fp1 = fopen(matrixA_filename, "r");
     fp2 = fopen(matrixB_filename, "r");
@@ -94,7 +95,7 @@ void main()
             }
 
             // printing the elements present in matrix A allocated in the dynamic memory
-            int count = 1;
+            int count = 1, format_brackets = 1;
             printf("\nMatrix A elements >>> \n");
             printf("[  ");
             for (int i = 0; i < matA_elements; i++)

@@ -11,11 +11,11 @@ void main()
     float matval = 0.0;
     int c;
 
-    fp = fopen("Mat4.txt", "r");
+    fp = fopen("Mat2.txt", "r");
 
     if (fp != NULL)
     {
-        find_number_of_rows_and_columns("Mat4.txt");
+        find_number_of_rows_and_columns("Mat2.txt");
 
         // Expected output (from the file `Mat1.txt`) >>> Rows: 8, Columns: 11
         printf("Rows: %d, Columns: %d\n", rows, columns);
@@ -46,22 +46,29 @@ void find_number_of_rows_and_columns(const char *file_name)
     int newCols = 1;
     char ch;
 
-    while (!feof(fp))
+    if (fp != NULL)
     {
-        ch = fgetc(fp);
-        // printf("\nCh: %c", ch);
-        if (ch == '\n')
+        while (!feof(fp))
         {
-            newRows++;
-            columns = newCols;
-            // printf("\nRows: %d, Column: %d", rows, columns);
-            newCols = 1;
+            ch = fgetc(fp);
+            // printf("\nCh: %c", ch);
+            if (ch == '\n')
+            {
+                newRows++;
+                columns = newCols;
+                // printf("\nRows: %d, Column: %d", rows, columns);
+                newCols = 1;
+            }
+            else if (ch == ',')
+            {
+                newCols++;
+            }
         }
-        else if (ch == ',')
-        {
-            newCols++;
-        }
+        rows = newRows;
+        // columns = newCols;
     }
-    rows = newRows;
-    // columns = newCols;
+    else
+    {
+        printf("\nNo such file found!\n");
+    }
 }
