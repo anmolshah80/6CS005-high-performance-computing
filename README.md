@@ -11,7 +11,7 @@
 - Password Cracking using multithreading (POSIX threads)
 
   - Cracks a password using multithreading and dynamic slicing based on thread count [done]
-  - Program finishes appropriately when password has been found
+  - Program finishes appropriately when password has been found [done]
 
 - Password Cracking using CUDA
 
