@@ -12,6 +12,8 @@
         exit(EXIT_FAILURE);      \
     } while (0)
 
+// Source >>> https://man7.org/linux/man-pages/man3/pthread_cancel.3.html
+
 static void *
 thread_func(void *ignored_argument)
 {

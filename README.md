@@ -11,7 +11,7 @@
 - Password Cracking using multithreading (POSIX threads)
 
   - Cracks a password using multithreading and dynamic slicing based on thread count [done]
-  - Program finishes appropriately when password has been found [done]
+  - Program finishes appropriately when password has been found [done] >>> [Source](https://man7.org/linux/man-pages/man3/pthread_cancel.3.html)
 
 - Password Cracking using CUDA
 
