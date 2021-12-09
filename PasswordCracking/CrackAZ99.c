@@ -144,7 +144,7 @@ void prepareSliceList()
   void *res;
   int s;
 
-  // to store the sliced/divided number of records to be processed by each thread
+  // to store the sliced/divided number of characters to be processed by each thread
   for (int i = 0; i < threadCount; i++)
   {
     sliceList[i] = loopCount / threadCount;

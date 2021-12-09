@@ -1,11 +1,54 @@
 #include <stdio.h>
 #include <stdlib.h>
+// #include <string.h>
 #include <pthread.h>
+#include <semaphore.h>
+#include <unistd.h>
 
+void inputArguments(char *program_name);
+void getArguments(int argc, char *argv[]);
 int *find_number_of_rows_and_columns(const char *file_name);
+void *multiply_matrices(void *args);
 
-void main()
+int max_threads_allowed; // to limit the number of input threads to the dimensions of the matrices
+
+int threadCount;
+
+// to get the start and end value of the iterative loop for each thread
+struct threadInfo
 {
+    int start;
+    int end;
+};
+
+int thread_counter = 0;
+
+// structure to pass multiple arguments inside pthread_create() while calling the thread function
+struct args_struct
+{
+    // int matC_elements;
+    int rows_matA;
+    int cols_matA;
+    int rows_matB;
+    int cols_matB;
+    float *matrixA_ptr;
+    float *matrixB_ptr;
+    // int thread_count;
+    struct threadInfo threadDetails[100];
+
+    int start;
+    int end;
+} * __args;
+
+float output_matrix_array[1000];
+
+sem_t sem;
+
+// the main function that invokes itself at runtime, ofcourse!
+void main(int argc, char *argv[])
+{
+    getArguments(argc, argv);
+
     FILE *fp1, *fp2 = NULL;
     int row, col;
     float matval = 0.0;
@@ -128,9 +171,9 @@ void main()
             }
             printf("\n\n");
 
+            /* 
             // algorithm created to multiply Matrix A and Matrix B resulting in an output as Matrix C
-            // float output_matrix[10][10];
-
+            
             float output_matrix_array[matC_elements];
 
             for (int i = 0; i < rows_in_matrixA; i++)
@@ -143,6 +186,90 @@ void main()
                     // (output_matrix_ptr + (i * 11 + j)) = sum;
                     output_matrix_array[i * cols_in_matrixC + j] = sum; // 3 is the number of columns in matrix C
                 }
+            }
+            */
+
+            // preparing the slicelist
+            int sliceList[threadCount];
+            int remainder = rows_in_matrixA % threadCount;
+
+            // to store the sliced/divided number of matrix rows to be processed by each thread
+            for (int i = 0; i < threadCount; i++)
+            {
+                sliceList[i] = rows_in_matrixA / threadCount;
+            }
+
+            // to update the sliced rows to be processed by each thread
+            // such that none of the rows remains unprocessed/unchecked
+            for (int j = 0; j < remainder; j++)
+            {
+                sliceList[j] = sliceList[j] + 1;
+            }
+
+            int startList[threadCount];
+            int endList[threadCount];
+
+            /*
+            * For threads = 3,
+            * each thread will compute a new row of the matrix
+            *  */
+            for (int k = 0; k < threadCount; k++)
+            {
+                if (k == 0)
+                {
+                    startList[k] = 0;
+                }
+                else
+                {
+                    startList[k] = endList[k - 1] + 1;
+                }
+
+                endList[k] = startList[k] + sliceList[k] - 1;
+
+                printf("\nstartList[%d] = %d\t\tendList[%d] = %d", k, startList[k], k, endList[k]);
+            }
+
+            struct threadInfo threadDetails[threadCount];
+
+            for (int l = 0; l < threadCount; l++)
+            {
+                threadDetails[l].start = startList[l];
+                threadDetails[l].end = endList[l];
+            }
+
+            pthread_t thread_id[threadCount];
+
+            // struct args_struct args;
+
+            __args = malloc(sizeof(struct args_struct) * 1);
+            __args->cols_matA = cols_in_matrixA;
+            __args->rows_matA = rows_in_matrixA;
+            __args->cols_matB = cols_in_matrixB;
+            __args->rows_matB = rows_in_matrixB;
+
+            sem_init(&sem, 0, 1);
+
+            printf("\n\nCreating threads and computing the matrix multiplication...\n");
+
+            for (int m = 0; m < threadCount; m++)
+            {
+                // args.matC_elements = matC_elements;
+                // args.cols_matA = cols_in_matrixA;
+                // args.rows_matA = rows_in_matrixA;
+                // args.cols_matB = cols_in_matrixB;
+                // args.rows_matB = rows_in_matrixB;
+                // args.threadDetails[m] = threadDetails[m];
+
+                __args->start = threadDetails[m].start;
+                __args->end = threadDetails[m].end;
+
+                // pthread_create(&thread_id[m], NULL, &multiply_matrices, (void *)&args);
+                pthread_create(&thread_id[m], NULL, &multiply_matrices, (void *)&__args);
+            }
+
+            for (int n = 0; n < threadCount; n++)
+            {
+                pthread_join(thread_id[n], NULL);
             }
 
             //////////////// TEST PURPOSES ONLY /////////////////////
@@ -173,7 +300,9 @@ void main()
             // deallocating the memory
             free(matrixA_ptr);
             free(matrixB_ptr);
+            free(__args);
             // free(output_matrix_ptr);
+            sem_destroy(&sem);
         }
         else
         {
@@ -186,6 +315,30 @@ void main()
     else
     {
         printf("\nNo such file found!\n");
+    }
+}
+
+// function to display a message explaining what and how arguments should be passed
+void inputArguments(char *program_name)
+{
+    fprintf(stderr, "arguments should be in the order as specified:   %s <number of threads>\n", program_name);
+    fprintf(stderr, "where number of threads should be > 0 and < 1000\n");
+    exit(0);
+}
+
+// function to get the command line arguments
+void getArguments(int argc, char *argv[])
+{
+    if (argc != 2)
+    {
+        inputArguments(argv[0]);
+    }
+
+    threadCount = strtol(argv[1], NULL, 10);
+
+    if (threadCount <= 0 || threadCount >= 1000)
+    {
+        inputArguments(argv[0]);
     }
 }
 
@@ -220,4 +373,43 @@ int *find_number_of_rows_and_columns(const char *file_name)
     // printf("\nRows: %d, Cols: %d\n", rows_cols[0], rows_cols[1]);
 
     return rows_cols;
+}
+
+// thread function to process the number of rows assigned to each thread
+void *multiply_matrices(void *args)
+{
+    sem_wait(&sem);
+
+    // float output_matrix_array[matC_elements];
+
+    // struct args_struct *arguments = (struct args_struct *)args;
+    struct args_struct *arguments = args;
+
+    int cols_in_matrixA = arguments->cols_matA;
+    int rows_in_matrixA = arguments->rows_matA;
+    int cols_in_matrixB = arguments->cols_matB;
+    int rows_in_matrixB = arguments->rows_matB;
+    float *matrixA_ptr = arguments->matrixA_ptr;
+    float *matrixB_ptr = arguments->matrixB_ptr;
+
+    int startLimit = arguments->start;
+    int endLimit = arguments->end;
+
+    int cols_in_matrixC = cols_in_matrixB;
+
+    for (int i = startLimit; i < endLimit; i++)
+    {
+        for (int j = 0; j < cols_in_matrixB; j++)
+        {
+            float sum = 0.0;
+            for (int k = 0; k < rows_in_matrixB; k++)
+                sum = sum + *(matrixA_ptr + (i * cols_in_matrixA + k)) * *(matrixB_ptr + (k * cols_in_matrixB + j));
+            // (output_matrix_ptr + (i * 11 + j)) = sum;
+            output_matrix_array[i * cols_in_matrixC + j] = sum; // 3 is the number of columns in matrix C
+        }
+    }
+
+    sem_post(&sem);
+
+    pthread_exit(NULL);
 }
