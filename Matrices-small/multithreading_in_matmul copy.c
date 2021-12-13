@@ -22,7 +22,6 @@ struct threadInfo
 };
 
 int thread_counter = 0;
-float matrixA_array[100];
 
 // structure to pass multiple arguments inside pthread_create() while calling the thread function
 struct args_struct
@@ -34,9 +33,9 @@ struct args_struct
     int cols_matB;
     float **matrixA_ptr;
     float **matrixB_ptr;
-    // float **output_matrix_ptr;
+    float **output_matrix_ptr;
     // int thread_count;
-    // struct threadInfo threadDetails[100];
+    struct threadInfo threadDetails[100];
 
     int start;
     int end;
@@ -107,7 +106,7 @@ void main(int argc, char *argv[])
             // dynamic memory allocation
             float *matrixA_ptr = (float *)malloc(matA_elements * sizeof(float));
             float *matrixB_ptr = (float *)malloc(matB_elements * sizeof(float));
-            // float *output_matrix_ptr = (float *)malloc(matC_elements * sizeof(float));
+            float *output_matrix_ptr = (float *)malloc(matC_elements * sizeof(float));
 
             if (matrixA_ptr == NULL || matrixB_ptr == NULL)
             {
@@ -215,7 +214,6 @@ void main(int argc, char *argv[])
             * For threads = 3,
             * each thread will compute a new row of the matrix
             *  */
-            printf("thread_count: %d\n", threadCount);
             for (int k = 0; k < threadCount; k++)
             {
                 if (k == 0)
@@ -233,7 +231,6 @@ void main(int argc, char *argv[])
             }
 
             struct threadInfo threadDetails[threadCount];
-            printf("here");
 
             for (int l = 0; l < threadCount; l++)
             {
@@ -251,15 +248,9 @@ void main(int argc, char *argv[])
             __args->cols_matB = cols_in_matrixB;
             __args->rows_matB = rows_in_matrixB;
             __args->matC_elements = matC_elements;
-            printf("I am nhere");
             __args->matrixA_ptr = &matrixA_ptr;
             __args->matrixB_ptr = &matrixB_ptr;
-            // __args->output_matrix_ptr = &output_matrix_ptr;
-
-            for (int i = 0; i < rows_in_matrixA * cols_in_matrixA; i++)
-            {
-                printf("matrixA_elements: %f\t", **(__args->matrixA_ptr + i));
-            }
+            __args->output_matrix_ptr = &output_matrix_ptr;
 
             sem_init(&sem, 0, 1);
 
@@ -316,7 +307,7 @@ void main(int argc, char *argv[])
             // deallocating the memory
             free(matrixA_ptr);
             free(matrixB_ptr);
-            // free(output_matrix_ptr);
+            free(output_matrix_ptr);
             free(__args);
             // free(output_matrix_ptr);
             sem_destroy(&sem);
@@ -408,23 +399,12 @@ void *multiply_matrices(void *args)
     int cols_in_matrixB = arguments->cols_matB;
     int rows_in_matrixB = arguments->rows_matB;
 
-    printf("\nmatC_elements in thread function: %d\n", matC_elements);
-    printf("cols_in_matrixA in thread function: %d\n", cols_in_matrixA);
-    printf("rows_in_matrixA in thread function: %d\n", rows_in_matrixA);
-    printf("cols_in_matrixB in thread function: %d\n", cols_in_matrixB);
-    printf("cols_in_matrixB in thread function: %d\n", cols_in_matrixB);
-
-    // float **matrixA_ptr = (float **)malloc(rows_in_matrixA * cols_in_matrixA * sizeof(float **));
-    // float **matrixA_ptr = arguments->matrixA_ptr;
-    // float **matrixB_ptr = (float **)malloc(rows_in_matrixB * cols_in_matrixB * sizeof(float **));
-    // float **matrixB_ptr = arguments->matrixB_ptr;
-    //float **output_matrix_ptr = (float **)malloc(rows_in_matrixA * cols_in_matrixB * sizeof(float **));
-    // float **output_matrix_ptr = arguments->output_matrix_ptr;
-
-    for (int i = 0; i < 100; i++)
-    {
-        matrixA_array[i] = **(arguments->matrixA_ptr + i);
-    }
+    float **matrixA_ptr = (float *)malloc(rows_in_matrixA * cols_in_matrixA * sizeof(float *));
+    matrixA_ptr = &arguments->matrixA_ptr;
+    float **matrixB_ptr = (float *)malloc(rows_in_matrixB * cols_in_matrixB * sizeof(float *));
+    matrixB_ptr = &arguments->matrixB_ptr;
+    float **output_matrix_ptr = (float *)malloc(rows_in_matrixA * cols_in_matrixB * sizeof(float *));
+    output_matrix_ptr = &arguments->output_matrix_ptr;
 
     /////////////////////////////// For test purposes only //////////////////////////
     int count = 1, format_brackets = 1;
@@ -432,10 +412,7 @@ void *multiply_matrices(void *args)
     printf("[  ");
     for (int i = 0; i < rows_in_matrixA * cols_in_matrixA; i++)
     {
-        // printf("%f  ", **(matrixA_ptr + i));
-        // printf("%f  ", **(arguments->matrixA_ptr + i));
-        printf("%f  ", matrixA_array[i]);
-
+        printf("%f  ", *(matrixA_ptr + i));
         count++;
 
         if (count == cols_in_matrixA + 1)
@@ -452,7 +429,7 @@ void *multiply_matrices(void *args)
 
     int cols_in_matrixC = cols_in_matrixB;
     int ptr_pos;
-    // float *sum_ptr;
+    float *sum_ptr;
 
     for (int i = startLimit; i <= endLimit; i++)
     {
@@ -460,17 +437,13 @@ void *multiply_matrices(void *args)
         {
             float sum = 0.0;
             for (int k = 0; k < rows_in_matrixB; k++)
-            {
-                // sum = sum + **(matrixA_ptr + (i * cols_in_matrixA + k)) * **(matrixB_ptr + (k * cols_in_matrixB + j));
-                sum = sum + **(arguments->matrixA_ptr + (i * cols_in_matrixA + k)) * **(arguments->matrixB_ptr + (k * cols_in_matrixB + j));
-            }
-
-            // sum_ptr = &sum;
+                sum = sum + **(matrixA_ptr + (i * cols_in_matrixA + k)) * **(matrixB_ptr + (k * cols_in_matrixB + j));
+            sum_ptr = &sum;
             printf("SUM: %f\t", sum);
             // (output_matrix_ptr + (i * 11 + j)) = sum;
             //output_matrix_array[i * cols_in_matrixC + j] = sum; // 3 is the number of columns in matrix C
             ptr_pos = i * cols_in_matrixC + j;
-            // output_matrix_ptr + (i * cols_in_matrixC + j) = &sum_ptr;
+            output_matrix_ptr + (i * cols_in_matrixC + j) = &sum_ptr;
         }
         printf("\n");
     }
@@ -504,9 +477,6 @@ void *multiply_matrices(void *args)
     //     // }
     // }
     // printf("  ]\n");
-    // free(matrixA_ptr);
-    // free(matrixB_ptr);
-    // free(output_matrix_ptr);
 
     sem_post(&sem);
 
