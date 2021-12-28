@@ -443,7 +443,7 @@ void *multiply_matrices(void *args)
             // (output_matrix_ptr + (i * 11 + j)) = sum;
             //output_matrix_array[i * cols_in_matrixC + j] = sum; // 3 is the number of columns in matrix C
             ptr_pos = i * cols_in_matrixC + j;
-            output_matrix_ptr + (i * cols_in_matrixC + j) = &sum_ptr;
+            // output_matrix_ptr + (i * cols_in_matrixC + j) = &sum_ptr;
         }
         printf("\n");
     }

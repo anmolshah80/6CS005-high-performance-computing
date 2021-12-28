@@ -2,8 +2,9 @@
 #include <stdlib.h>
 // #include <string.h>
 #include <pthread.h>
-#include <semaphore.h>
+// #include <semaphore.h>
 #include <unistd.h>
+#include <time.h>
 
 void inputArguments(char *program_name);
 void getArguments(int argc, char *argv[]);
@@ -13,6 +14,21 @@ void *multiply_matrices(void *args);
 int max_threads_allowed; // to limit the number of input threads to the dimensions of the matrices
 
 int threadCount;
+
+typedef struct
+{
+    float x;
+} unit;
+
+typedef struct
+{
+    int rows;
+    int cols;
+    unit *x;
+} matrix;
+
+matrix A, B, C, _C;
+pthread_mutex_t mutex;
 
 // to get the start and end value of the iterative loop for each thread
 struct threadInfo
@@ -44,7 +60,90 @@ struct args_struct
 
 float output_matrix_array[1000];
 
-sem_t sem;
+// sem_t sem;
+
+matrix create_matrix(int rows, int cols)
+{
+    matrix target;
+    int i, j;
+    int data;
+
+    target.rows = rows;
+    target.cols = cols;
+    target.x = (unit *)malloc(rows * cols * sizeof(unit));
+    for (i = 0; i < rows; i++)
+        for (j = 0; j < cols; j++)
+        {
+            data = rand() % 100;
+            (target.x + i * target.cols + j)->x = (float)data;
+        }
+    return target;
+}
+
+void show_matrix(matrix shows)
+{
+    int rows = shows.rows;
+    int cols = shows.cols;
+    int i, j;
+
+    for (i = 0; i < rows; i++)
+    {
+        for (j = 0; j < cols; j++)
+            printf("%f\t", (shows.x + i * cols + j)->x);
+        printf("\n");
+    }
+}
+
+int CalcuOneUnit(int first, int second)
+{
+    int i, res = 0;
+
+    // Here for testing thread running status
+    pthread_mutex_lock(&mutex);
+    printf("%d,%d is working\n", first, second);
+    pthread_mutex_unlock(&mutex);
+
+    for (i = 0; i < A.cols; i++)
+        res += (A.x + first * A.cols + i)->x * (B.x + i * B.cols + second)->x;
+    return res;
+}
+
+void *MultWork(void *param)
+{
+    while (1)
+    {
+        int firstNum;
+        int secondNum;
+        int res, i, j, flag = 0, close = 0;
+
+        pthread_mutex_lock(&mutex);
+        for (i = 0; i < _C.rows; i++)
+        {
+            for (j = 0; j < _C.cols; j++)
+            {
+                if ((_C.x + i * _C.cols + j)->x == 0.0)
+                {
+                    firstNum = i;
+                    secondNum = j;
+                    (_C.x + i * _C.cols + j)->x = 1;
+                    close = 1;
+                    break;
+                }
+            }
+            if (close == 1)
+                break;
+            else if (i == _C.rows - 1)
+                flag = 1;
+        }
+        pthread_mutex_unlock(&mutex);
+
+        if (flag == 1)
+            pthread_exit(NULL);
+        res = CalcuOneUnit(firstNum, secondNum);
+        (C.x + firstNum * C.cols + secondNum)->x = res;
+    }
+    pthread_exit(NULL);
+}
 
 // the main function that invokes itself at runtime, ofcourse!
 void main(int argc, char *argv[])
@@ -58,8 +157,8 @@ void main(int argc, char *argv[])
 
     int rows_in_matrixA, cols_in_matrixA, rows_in_matrixB, cols_in_matrixB, rows_in_matrixC, cols_in_matrixC;
 
-    char *matrixA_filename = "Mat1.txt";
-    char *matrixB_filename = "Mat2.txt";
+    char *matrixA_filename = "Mat_A.txt";
+    char *matrixB_filename = "Mat_B.txt";
 
     fp1 = fopen(matrixA_filename, "r");
     fp2 = fopen(matrixB_filename, "r");
@@ -87,9 +186,11 @@ void main(int argc, char *argv[])
         rows_in_matrixC = rows_in_matrixA;
         cols_in_matrixC = cols_in_matrixB;
 
+        //////////////////// TEST PURPOSES ONLY //////////////////////////
         // Expected output (from the file `Mat2.txt`) >>> Rows: 11, Columns: 8
         // printf("\nmatB.rows >>> %d", *(q + 0));
         // printf("\nmatB.columns >>> %d", *(q + 1));
+        //////////////////// TEST PURPOSES ONLY //////////////////////////
 
         printf("\nMatrix A >>> Rows: %d, Columns: %d\n", rows_in_matrixA, cols_in_matrixA);
         printf("Matrix B >>> Rows: %d, Columns: %d\n", rows_in_matrixB, cols_in_matrixB);
@@ -109,6 +210,13 @@ void main(int argc, char *argv[])
             float *matrixB_ptr = (float *)malloc(matB_elements * sizeof(float));
             // float *output_matrix_ptr = (float *)malloc(matC_elements * sizeof(float));
 
+            srand((unsigned)time(0));
+
+            matrix target;
+            target.rows = rows_in_matrixA;
+            target.cols = cols_in_matrixA;
+            target.x = (unit *)malloc(row * col * sizeof(unit));
+
             if (matrixA_ptr == NULL || matrixB_ptr == NULL)
             {
                 printf("\nError! memory not allocated.\n");
@@ -123,9 +231,21 @@ void main(int argc, char *argv[])
                 {
                     fscanf(fp1, "%f,", matrixA_ptr + counter_matA);
                     // printf("R: %d, C: %d, %f  ", row, col, *(matrixA_ptr + col));
+                    (target.x + row * target.cols + col)->x = *(matrixA_ptr + counter_matA);
                     counter_matA++;
                 }
             }
+
+            printf("\nMatrix A elements >>> \n");
+            A = target;
+            show_matrix(A);
+
+            // free(target.x);
+            target.rows = rows_in_matrixB;
+            target.cols = cols_in_matrixB;
+            // target.x = (unit *)malloc(row * col * sizeof(unit));
+
+            // A = create_matrix(rows_in_matrixA, cols_in_matrixA, fp1, &matrixA_ptr);
 
             // Scanning the file and storing the matrix B data in allocated memory
             int counter_matB = 0;
@@ -135,11 +255,33 @@ void main(int argc, char *argv[])
                 {
                     fscanf(fp2, "%f,", matrixB_ptr + counter_matB);
                     // printf("R: %d, C: %d, %f  ", row, col, *(matrixA_ptr + col));
+                    (target.x + row * target.cols + col)->x = *(matrixB_ptr + counter_matB);
                     counter_matB++;
                 }
             }
 
-            // printing the elements present in matrix A allocated in the dynamic memory
+            printf("\nMatrix B elements >>> \n");
+            B = target;
+            show_matrix(B);
+
+            int i;
+            C = create_matrix(A.rows, B.cols);
+            for (i = 0; i < C.cols * C.rows; i++)
+            {
+                (C.x + i)->x = 0.0;
+            }
+
+            _C = create_matrix(A.rows, B.cols);
+            for (i = 0; i < _C.cols * _C.rows; i++)
+            {
+                (_C.x + i)->x = 0.0;
+            }
+
+            // B = create_matrix(rows_in_matrixB, cols_in_matrixB, fp2, &matrixB_ptr);
+
+            ////////////////////// MATRIX ELEMENTS OUTPUT ////////////////////////
+            /*
+            printing the elements present in matrix A allocated in the dynamic memory
             int count = 1, format_brackets = 1;
             printf("\nMatrix A elements >>> \n");
             printf("[  ");
@@ -172,6 +314,8 @@ void main(int argc, char *argv[])
                 }
             }
             printf("\n\n");
+            */
+            ////////////////////// MATRIX ELEMENTS OUTPUT ////////////////////////
 
             /* 
             // algorithm created to multiply Matrix A and Matrix B resulting in an output as Matrix C
@@ -192,6 +336,7 @@ void main(int argc, char *argv[])
             */
 
             // preparing the slicelist
+            /*
             int sliceList[threadCount];
             int remainder = rows_in_matrixA % threadCount;
 
@@ -210,11 +355,13 @@ void main(int argc, char *argv[])
 
             int startList[threadCount];
             int endList[threadCount];
+            */
 
             /*
             * For threads = 3,
             * each thread will compute a new row of the matrix
             *  */
+            /*
             printf("thread_count: %d\n", threadCount);
             for (int k = 0; k < threadCount; k++)
             {
@@ -231,30 +378,31 @@ void main(int argc, char *argv[])
 
                 printf("\nstartList[%d] = %d\t\tendList[%d] = %d", k, startList[k], k, endList[k]);
             }
+            */
 
+            /*
             struct threadInfo threadDetails[threadCount];
-            printf("here");
 
             for (int l = 0; l < threadCount; l++)
             {
                 threadDetails[l].start = startList[l];
                 threadDetails[l].end = endList[l];
             }
+            */
 
             pthread_t thread_id[threadCount];
 
             // struct args_struct args;
 
+            /*
             __args = malloc(sizeof(struct args_struct) * 1);
             __args->cols_matA = cols_in_matrixA;
             __args->rows_matA = rows_in_matrixA;
             __args->cols_matB = cols_in_matrixB;
             __args->rows_matB = rows_in_matrixB;
             __args->matC_elements = matC_elements;
-            printf("I am nhere");
             __args->matrixA_ptr = &matrixA_ptr;
             __args->matrixB_ptr = &matrixB_ptr;
-            // __args->output_matrix_ptr = &output_matrix_ptr;
 
             for (int i = 0; i < rows_in_matrixA * cols_in_matrixA; i++)
             {
@@ -265,8 +413,13 @@ void main(int argc, char *argv[])
 
             printf("\n\nCreating threads and computing the matrix multiplication...\n");
 
+            */
+
+            pthread_mutex_init(&mutex, NULL);
+
             for (int m = 0; m < threadCount; m++)
             {
+                /*
                 // args.matC_elements = matC_elements;
                 // args.cols_matA = cols_in_matrixA;
                 // args.rows_matA = rows_in_matrixA;
@@ -276,15 +429,21 @@ void main(int argc, char *argv[])
 
                 __args->start = threadDetails[m].start;
                 __args->end = threadDetails[m].end;
+                
 
                 // pthread_create(&thread_id[m], NULL, &multiply_matrices, (void *)&args);
                 pthread_create(&thread_id[m], NULL, &multiply_matrices, (void *)&__args);
+                */
+                pthread_create(&thread_id[m], NULL, MultWork, NULL);
             }
 
             for (int n = 0; n < threadCount; n++)
             {
                 pthread_join(thread_id[n], NULL);
             }
+
+            printf("\nOutput matrix C elements >>> \n");
+            show_matrix(C);
 
             //////////////// TEST PURPOSES ONLY /////////////////////
             // for (int i = 0; i <= matC_elements; i++)
@@ -318,8 +477,9 @@ void main(int argc, char *argv[])
             free(matrixB_ptr);
             // free(output_matrix_ptr);
             free(__args);
+            free(target.x);
             // free(output_matrix_ptr);
-            sem_destroy(&sem);
+            // sem_destroy(&sem);
         }
         else
         {
@@ -395,7 +555,7 @@ int *find_number_of_rows_and_columns(const char *file_name)
 // thread function to process the number of rows assigned to each thread
 void *multiply_matrices(void *args)
 {
-    sem_wait(&sem);
+    // sem_wait(&sem);
 
     // float output_matrix_array[matC_elements];
 
@@ -508,7 +668,7 @@ void *multiply_matrices(void *args)
     // free(matrixB_ptr);
     // free(output_matrix_ptr);
 
-    sem_post(&sem);
+    // sem_post(&sem);
 
     pthread_exit(NULL);
 }
