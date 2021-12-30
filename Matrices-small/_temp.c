@@ -46,7 +46,12 @@ int CalcuOneUnit(int first, int second)
     pthread_mutex_unlock(&mutex); // Here for testing thread running status
 
     for (i = 0; i < A.col; i++)
+    {
         res += (A.x + first * A.col + i)->x * (B.x + i * B.col + second)->x;
+        printf("\nA.x: %d + first: %d * A.cols: %d + i: %d", *(A.x), first, A.col, i);
+        printf("\nB.x: %d + i: %d * B.cols: %d + second: %d", *(B.x), i, B.col, second);
+        // printf("\n(A.x + first * A.cols + i)->x: %d * (B.x + i * B.cols + second)->x: %d", (A.x + first * A.col + i)->x, (B.x + i * B.col + second)->x);
+    }
     return res;
 }
 

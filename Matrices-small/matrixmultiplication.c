@@ -12,8 +12,8 @@ void main()
 
     int rows_in_matrixA, cols_in_matrixA, rows_in_matrixB, cols_in_matrixB, rows_in_matrixC, cols_in_matrixC;
 
-    char *matrixA_filename = "Mat_A.txt";
-    char *matrixB_filename = "Mat_B.txt";
+    char *matrixA_filename = "Mat1.txt";
+    char *matrixB_filename = "Mat2.txt";
 
     fp1 = fopen(matrixA_filename, "r");
     fp2 = fopen(matrixB_filename, "r");
