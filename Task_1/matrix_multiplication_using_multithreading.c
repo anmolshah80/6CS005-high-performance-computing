@@ -3,8 +3,9 @@
 #include <pthread.h>
 #include <unistd.h>
 
-// Compile with: gcc multithreading_in_matmul_optimized.c -pthread -o multithreading_in_matmul_optimized
-// Run with: multithreading_in_matmul_optimized <number_of_threads>
+// Compile with: gcc matrix_multiplication_using_multithreading.c -pthread -o matrix_multiplication_using_multithreading
+// Run with: matrix_multiplication_using_multithreading <number_of_threads>
+//          where number of threads > 0 and < 1000
 
 int threadCount;
 
