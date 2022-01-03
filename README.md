@@ -21,8 +21,8 @@
   - Decrypted password sent back to the CPU and printed `[done]` >>> [str_cmp](https://stackoverflow.com/questions/19600879/how-to-compare-arrays-of-char-in-cuda-c), [str_cpy](https://stackoverflow.com/questions/20201335/add-char-arrays-in-cuda/20201511#20201511), [cudaMemcpy](https://cuda-tutorial.readthedocs.io/en/latest/tutorials/tutorial01/), [cudaMemcpyDeviceToHost](https://usc-rc.github.io/tutorials/cuda)
 
 - Box Blur using CUDA
-  - Reading in an image file into a single or 2D array
-  - Allocating the correct amount of memory on the GPU based on input data. Memory is freed once used
-  - Applying Box filter on image in the kernel function
-  - Return blurred image data from the GPU to the CPU
-  - Outputting the correct image with Box Blur applied as a file
+  - Reading in an image file into a single or 2D array `[done]`
+  - Allocating the correct amount of memory on the GPU based on input data. Memory is freed once used `[done]`
+  - Applying Box filter on image in the kernel function `[done]`
+  - Return blurred image data from the GPU to the CPU `[done]`
+  - Outputting the correct image with Box Blur applied as a file `[done]`
